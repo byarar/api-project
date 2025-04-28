@@ -1,4 +1,7 @@
 class PostsController < ApplicationController
+  # Use before_action to find the post before certain actions
+  before_action :find_post, only: [:show, :update, :destroy]
+
   # Path: GET /users/:user_id/posts
   # Path: GET /posts
   def index
@@ -13,8 +16,7 @@ class PostsController < ApplicationController
   # Path: GET /users/:user_id/posts/:id
   # Path: GET /posts/:id
   def show
-    post = find_post
-    render json: post.to_json(include: :comments)
+    render json: @post.to_json(include: :comments)
   end
 
   # Path: POST /users/:user_id/posts
@@ -32,27 +34,26 @@ class PostsController < ApplicationController
   # Path: PATCH/PUT /posts/:id
   # Path: PATCH/PUT /users/:user_id/posts/:id
   def update
-    post = find_post
-    post.update(post_params)
-    render json: post
+    @post.update(post_params)
+    render json: @post
   end
 
   # Path: DELETE /posts/:id
   # Path: DELETE /users/:user_id/posts/:id
   def destroy
-    post = find_post
-    post.destroy
+    @post.destroy
     head :no_content
   end
 
   private
 
+  # Refactor find_post to use before_action
   def find_post
-    if params[:user_id]
-      User.find(params[:user_id]).posts.find(params[:id])
-    else
-      Post.find(params[:id])
-    end
+    @post = if params[:user_id]
+              User.find(params[:user_id]).posts.find(params[:id])
+            else
+              Post.find(params[:id])
+            end
   end
 
   def post_params
