@@ -28,7 +28,12 @@ class PostsController < ApplicationController
            else
              Post.create(post_params)
            end
-    render json: post
+
+    if post.save
+      render json: post, status: :created
+    else
+      render json: { errors: post.errors.full_messages }, status: :unprocessable_entity
+    end
   end
 
   # Path: PATCH/PUT /posts/:id

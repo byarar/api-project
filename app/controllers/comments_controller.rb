@@ -29,7 +29,12 @@ class CommentsController < ApplicationController
               else
                 Comment.create(comment_params)
               end
-    render json: comment
+
+    if comment.save
+      render json: comment, status: :created
+    else
+      render json: { errors: comment.errors.full_messages }, status: :unprocessable_entity
+    end
   end
 
   # Path: PATCH/PUT /comments/:id
