@@ -1,34 +1,21 @@
 class PostsController < ApplicationController
-  # Use before_action to find the post before certain actions
+  before_action :authorize_request, except: [:index, :show]
   before_action :find_post, only: [:show, :update, :destroy]
 
-  # Path: GET /users/:user_id/posts
-  # Path: GET /posts
+  # GET /posts
   def index
-    posts = if params[:user_id]
-              User.find(params[:user_id]).posts
-            else
-              Post.all
-            end
+    posts = Post.all
     render json: posts
   end
 
-  # Path: GET /users/:user_id/posts/:id
-  # Path: GET /posts/:id
+  # GET /posts/:id
   def show
     render json: @post.to_json(include: :comments)
   end
 
-  # Path: POST /users/:user_id/posts
-  # Path: POST /posts
+  # POST /posts
   def create
-    post = if params[:user_id]
-             user = User.find(params[:user_id])
-             user.posts.create(post_params)
-           else
-             Post.create(post_params)
-           end
-
+    post = current_user.posts.build(post_params)
     if post.save
       render json: post, status: :created
     else
@@ -36,32 +23,36 @@ class PostsController < ApplicationController
     end
   end
 
-  # Path: PATCH/PUT /posts/:id
-  # Path: PATCH/PUT /users/:user_id/posts/:id
+  # PATCH/PUT /posts/:id
   def update
-    @post.update(post_params)
-    render json: @post
+    if @post.user == current_user
+      if @post.update(post_params)
+        render json: @post
+      else
+        render json: { errors: @post.errors.full_messages }, status: :unprocessable_entity
+      end
+    else
+      render json: { error: 'Unauthorized' }, status: :unauthorized
+    end
   end
 
-  # Path: DELETE /posts/:id
-  # Path: DELETE /users/:user_id/posts/:id
+  # DELETE /posts/:id
   def destroy
-    @post.destroy
-    head :no_content
+    if @post.user == current_user
+      @post.destroy
+      head :no_content
+    else
+      render json: { error: 'Unauthorized' }, status: :unauthorized
+    end
   end
 
   private
 
-  # Refactor find_post to use before_action
   def find_post
-    @post = if params[:user_id]
-              User.find(params[:user_id]).posts.find(params[:id])
-            else
-              Post.find(params[:id])
-            end
+    @post = Post.find(params[:id])
   end
 
   def post_params
-    params.require(:post).permit(:user_id, :title, :body)
-  end  
+    params.require(:post).permit(:title, :body)
+  end
 end

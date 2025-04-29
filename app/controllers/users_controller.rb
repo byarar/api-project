@@ -1,4 +1,6 @@
 class UsersController < ApplicationController
+  before_action :find_user, only: [:show, :update, :destroy]
+
   # Path: GET /users
   def index
     users = User.all
@@ -7,37 +9,39 @@ class UsersController < ApplicationController
 
   # Path: GET /users/:id
   def show
-    user = find_user
-    render json: user.to_json(include: :posts)
+    render json: @user.to_json(include: :posts)
   end
 
   # Path: POST /users
   def create
     user = User.create(user_params)
-    render json: user
+
+    if user.save
+      render json: user, status: :created
+    else
+      render json: { errors: user.errors.full_messages }, status: :unprocessable_entity
+    end
   end
 
   # Path: PATCH/PUT /users/:id
   def update
-    user = find_user
-    user.update(user_params)
-    render json: user
+    @user.update(user_params)
+    render json: @user
   end
 
   # Path: DELETE /users/:id
   def destroy
-    user = find_user
-    user.destroy
+    @user.destroy
     head :no_content
   end
 
   private
 
   def find_user
-    User.find(params[:id])
+    @user = User.find(params[:id])
   end
 
   def user_params
-    params.require(:user).permit(:username)
+    params.require(:user).permit(:username, :password)
   end
 end

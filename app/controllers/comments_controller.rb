@@ -1,34 +1,25 @@
 class CommentsController < ApplicationController
-  # Use before_action to find the comment before certain actions
+  before_action :authorize_request, except: [:index, :show]
   before_action :find_comment, only: [:show, :update, :destroy]
 
-  # Path: GET /posts/:post_id/comments
   # Path: GET /comments
   def index
-    comments = if params[:post_id]
-                 post = Post.find(params[:post_id])
-                 post.comments
-               else
-                 Comment.all
-               end
+    comments = Comment.all
     render json: comments
   end
 
-  # Path: GET /posts/:post_id/comments/:id
   # Path: GET /comments/:id
   def show
     render json: @comment
   end
 
-  # Path: POST /posts/:post_id/comments
   # Path: POST /comments
   def create
-    comment = if params[:post_id]
-                post = Post.find(params[:post_id])
-                post.comments.create(comment_params)
-              else
-                Comment.create(comment_params)
-              end
+    # Find the post using the post_id parameter
+    post = Post.find(params[:comment][:post_id])
+
+    # Now, create the comment and associate it with both the post and the current user
+    comment = post.comments.create(comment_params.merge(user_id: current_user.id))
 
     if comment.save
       render json: comment, status: :created
@@ -38,31 +29,35 @@ class CommentsController < ApplicationController
   end
 
   # Path: PATCH/PUT /comments/:id
-  # Path: PATCH/PUT /posts/:post_id/comments/:id
   def update
-    @comment.update(comment_params)
-    render json: @comment
+    if @comment.user == current_user
+      if @comment.update(comment_params)
+        render json: @comment
+      else
+        render json: { errors: @comment.errors.full_messages }, status: :unprocessable_entity
+      end
+    else
+      render json: { error: 'Unauthorized' }, status: :unauthorized
+    end
   end
 
   # Path: DELETE /comments/:id
-  # Path: DELETE /posts/:post_id/comments/:id
   def destroy
-    @comment.destroy
-    head :no_content
+    if @comment.user == current_user
+      @comment.destroy
+      head :no_content
+    else
+      render json: { error: 'Unauthorized' }, status: :unauthorized
+    end
   end
 
   private
 
-  # Refactor find_comment to use before_action
   def find_comment
-    @comment = if params[:post_id]
-                 Post.find(params[:post_id]).comments.find(params[:id])
-               else
-                 Comment.find(params[:id])
-               end
+    @comment = Comment.find(params[:id])
   end
 
   def comment_params
     params.require(:comment).permit(:post_id, :body)
-  end  
+  end
 end
