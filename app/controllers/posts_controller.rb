@@ -1,5 +1,5 @@
 class PostsController < ApplicationController
-  before_action :authorize_request, except: [:index, :show]
+  before_action :authorize_request, except: [:index, :show, :paginated]
   before_action :find_post, only: [:show, :update, :destroy]
 
   # GET /posts
@@ -7,6 +7,21 @@ class PostsController < ApplicationController
     posts = Post.all
     render json: posts
   end
+
+  # GET /posts/paginated?page=page_no
+  def paginated
+    posts = Post.page(params[:page]).per(2)
+    render json: {
+      posts: posts,
+      meta: {
+        current_page: posts.current_page,
+        next_page: posts.next_page,
+        prev_page: posts.prev_page,
+        total_pages: posts.total_pages,
+        total_count: posts.total_count
+      }
+    }
+  end  
 
   # GET /posts/:id
   def show

@@ -11,6 +11,10 @@ Rails.application.routes.draw do
   post 'login', to: 'authentication#login'
 
   resources :users
-  resources :posts
+  resources :posts do
+    collection do
+      get :paginated
+    end
+  end
   resources :comments
 end
